@@ -22,3 +22,11 @@ pgdata/
 
 # Logs
 *.log
+
+# Лаба 1
+backend/.venv/
+backend/.env
+*.key
+*.crt
+.htpasswd
+.pgdata/
