@@ -1,0 +1,59 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261009005740
+Username: LAPTOP\andre
+RunAs User: LAPTOP\andre
+Configuration Name: 
+Machine: LAPTOP (Microsoft Windows NT 10.0.26300.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File lab2/scripts/measure-build-time.ps1
+Process ID: 26744
+PSVersion: 5.1.26100.9549
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9549
+BuildVersion: 10.0.26100.9549
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+время пересборки после правки одной строки кода
+дата: 2026-10-09T00:57:40.3066514+03:00
+docker: Docker version 29.8.2, build 7fc2dff
+
+=== Шаг 1. Холодная сборка обоих образов, --no-cache ===
+  notes-backend:bad собран
+  notes-backend:good собран
+
+=== Шаг 2. Пересборка без правок, все должно взяться из кеша ===
+  плохой:  1.31 с
+  хороший: 0.73 с
+
+=== Шаг 3. Меняем одну строку кода и пересобираем ===
+  изменен файл: backend/app/main.py
+
+  плохой:  16.88 с
+  хороший: 1.94 с
+  файл кода вернули как был
+
+=== Итог ===
+образ                    без правки     после правки
+notes-backend:bad        1.31 с         16.88 с
+notes-backend:good       0.73 с         1.94 с
+
+  разница: 14.94 с
+  хороший быстрее в 8.7 раз
+
+  почему так:
+   - в плохом Dockerfile сначала COPY . . и только потом pip install, поэтому правка
+     кода сбрасывает слой и зависимости ставятся заново;
+   - в хорошем сначала копируется requirements.txt и ставится отдельным слоем, а код
+     копируется после, поэтому пересобирается только слой с исходниками.
+
+  размеры образов:
+notes-backend:good  331MB
+notes-backend:bad  1.87GB
+вывод сохранен в lab2/docs/build-timing.txt
+**********************
+Windows PowerShell transcript end
+End time: 20261009010029
+**********************
