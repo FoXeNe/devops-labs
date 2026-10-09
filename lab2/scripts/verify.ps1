@@ -1,5 +1,5 @@
 ﻿<#
-    проверка пунктов лабы 2 для windows. запускать из корня репозитория:
+    проверка пунктов лабы 2 для windows, запуск из корня репозитория:
         powershell -File lab2/scripts/verify.ps1
     вывод дублируется в lab2/docs/verify-output.txt
 #>
@@ -30,9 +30,6 @@ function Invoke-Compose {
     & docker compose --env-file $envFile -f lab2/docker-compose.yml @Args
 }
 
-# бэкенд отдает json без charset в заголовке, а powershell 5.1 в таком случае
-# декодирует ответ как latin-1 и кириллица превращается в кракозябры.
-# браузеры для json всегда берут utf-8, поэтому тут читаем так же
 function Get-Utf8 {
     param([string]$Url, [int]$TimeoutSec = 10)
     $wc = New-Object System.Net.WebClient
@@ -51,7 +48,7 @@ if (-not (Test-Path $envFile)) {
 }
 
 # читаем .env чтобы знать порты и доступы к базе.
-# скрипт держим совместимым с windows powershell 5.1, без тернарников из ps7
+
 $cfg = @{}
 Get-Content $envFile | Where-Object { $_ -match '^\s*[^#].*=' } | ForEach-Object {
     $k, $v = $_ -split '=', 2
@@ -71,8 +68,7 @@ $cfgOut = Invoke-Compose config -q
 if ($LASTEXITCODE -eq 0) { Ok "docker-compose.yml валиден" } else { Bad "docker-compose.yml невалиден: $cfgOut" }
 
 Step "2. docker compose up, три сервиса одной командой"
-# --wait держит команду до готовности сервисов и не стримит их логи,
-# иначе powershell 5.1 виснет на потоке вывода
+
 Invoke-Compose up -d --build --wait --wait-timeout 180
 if ($LASTEXITCODE -eq 0) { Ok "up выполнен, все сервисы дождались готовности" } else { Bad "up вернул код $LASTEXITCODE" }
 
@@ -86,8 +82,8 @@ foreach ($svc in 'db', 'backend', 'frontend') {
 Step "2b. docker ps"
 docker ps --filter "name=lab2" --format "table {{.Names}}`t{{.Image}}`t{{.Status}}`t{{.Ports}}" | Out-Host
 
-# если стек не поднялся, дальше проверять нечего: все проверки ниже просто
-# накидают ложных провалов, поэтому останавливаемся и показываем причину
+# если стек не поднялся, дальше проверять нечего
+
 if ($running.Count -lt 3) {
     Write-Host ""
     Write-Host "стек поднялся не полностью, дальше проверять нечего" -ForegroundColor Red
@@ -102,7 +98,7 @@ Step "3. Healthcheck-статусы"
 Start-Sleep -Seconds 10
 foreach ($c in 'lab2-db', 'lab2-backend', 'lab2-frontend') {
     $st = (docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' $c 2>&1) -join ''
-    # пишем ${c}: а не $c:, иначе powershell считает двоеточие частью имени переменной
+    
     switch -Regex ($st) {
         '^healthy$' { Ok "${c}: healthy" }
         '^none$'    { Bad "${c}: healthcheck не задан" }

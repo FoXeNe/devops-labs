@@ -1,4 +1,4 @@
-# хороший вариант. собираем из корня репозитория:
+# хороший вариант, собираем из корня репозитория:
 #   docker build -f lab2/good/Dockerfile.backend -t notes-backend:good .
 
 # builder, в финальный образ компиляторы не попадут
@@ -26,8 +26,10 @@ FROM python:3.11.9-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    DATABASE_URL="postgresql+asyncpg://notes:notes@db:5432/notesdb"
+    PATH="/opt/venv/bin:$PATH"
+
+# DATABASE_URL тут намеренно не задаем: доступы к базе должны жить вне образа
+# их подставляет compose из lab2/.env, а entrypoint падает, если переменной нет
 
 # готовое окружение из builder, без gcc и кешей
 COPY --from=builder /opt/venv /opt/venv

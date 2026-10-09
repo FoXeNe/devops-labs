@@ -1,6 +1,5 @@
 # фронт у нас это один статический index.html, собирать нечего, поэтому сразу nginx.
-# если появится сборка (vite/webpack), сюда добавится первый стейдж FROM node AS build,
-# а nginx останется финальным. собирать из корня:
+# собирается из корня:
 #   docker build -f lab2/good/Dockerfile.frontend -t notes-frontend:good .
 
 FROM nginx:1.27.4-alpine AS runtime
@@ -16,6 +15,5 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
 
 # nginx в этом образе стартует от root, чтобы занять 80 порт, и дальше сам
-# сбрасывает привилегии до nginx. если нужен полностью non-root, есть
-# nginxinc/nginx-unprivileged, там слушают 8080
+# сбрасывает привилегии до nginx
 CMD ["nginx", "-g", "daemon off;"]
