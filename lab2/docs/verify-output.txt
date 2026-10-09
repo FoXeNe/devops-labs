@@ -1,0 +1,97 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261010013228
+Username: LAPTOP\andre
+RunAs User: LAPTOP\andre
+Configuration Name: 
+Machine: LAPTOP (Microsoft Windows NT 10.0.26300.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File lab2/scripts/verify.ps1
+Process ID: 2792
+PSVersion: 5.1.26100.9549
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9549
+BuildVersion: 10.0.26100.9549
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+проверка стека лабы 2
+дата: 2026-10-10T01:32:28.7310781+03:00
+docker: Docker version 29.8.2, build 7fc2dff
+
+=== 1. Валидация compose-файла ===
+  [OK]   docker-compose.yml валиден
+
+=== 2. docker compose up, три сервиса одной командой ===
+
+  [OK]   up выполнен, все сервисы дождались готовности
+  запущены: backend db frontend
+  [OK]   сервис db запущен
+  [OK]   сервис backend запущен
+  [OK]   сервис frontend запущен
+
+=== 2b. docker ps ===
+NAMES           IMAGE                  STATUS                    PORTS
+lab2-frontend   bdfbfdfab070           Up 17 seconds (healthy)   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+lab2-backend    fd7f80860555           Up 26 minutes (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+lab2-db         postgres:16.4-alpine   Up 8 hours (healthy)      5432/tcp
+
+=== 3. Healthcheck-статусы ===
+  [OK]   lab2-db: healthy
+  [OK]   lab2-backend: healthy
+  [OK]   lab2-frontend: healthy
+
+=== 4. Фронт и api ===
+  [OK]   GET / -> 200
+  [OK]   в html есть разметка фронта
+  [OK]   GET /api/items через nginx -> 200
+  [OK]   GET /api/health через nginx -> 200
+  [OK]   GET :8000/api/health напрямую -> 200
+
+=== 5. Запись в базу и чтение из нее ===
+  [OK]   POST /api/items -> 201
+  [OK]   сервер вернул созданную запись
+  [OK]   запись видна в GET /api/items
+  [OK]   строка есть в postgres, select вернул 1
+
+=== 6. Именованный том: удаляем контейнер и поднимаем заново ===
+  [OK]   контейнер backend удален
+  [OK]   после пересоздания запись 'verify-1791595967.75996' на месте
+  том: lab2-pgdata -> /var/lib/docker/volumes/lab2-pgdata/_data
+
+=== 7. Пользователь внутри контейнера ===
+  [OK]   docker exec lab2-backend whoami -> app
+  [OK]   uid внутри контейнера 10001
+
+=== 8. Сетевая изоляция ===
+  [OK]   фронт не резолвит имя db
+  попытка соединения фронта с db:5432 -> nc: bad address 'db'
+FAILED
+  [OK]   соединение фронта с базой невозможно
+  сети frontend: lab2-frontend-net
+  сети db:       lab2-backend-net
+  [OK]   фронт не в сети базы
+  [OK]   база не в сети фронта
+  [OK]   порт 5432 на хост не опубликован
+
+=== 9. Размеры образов ===
+  notes-frontend:good|73.1MB
+  notes-backend:good|331MB
+  notes-backend:bad|1.87GB
+  плохой backend:  1785 МБ
+  хороший backend: 315 МБ
+  [OK]   хороший образ меньше плохого
+
+=== 10. Итоговое состояние стека ===
+NAME            IMAGE                                                                     COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+lab2-backend    notes-backend:good                                                        "/usr/local/bin/entrΓÇª"   backend    16 seconds ago   Up 15 seconds (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+lab2-db         postgres:16.4-alpine                                                      "docker-entrypoint.sΓÇª"   db         26 hours ago     Up 8 hours (healthy)      5432/tcp
+lab2-frontend   sha256:bdfbfdfab0704f964974d939cd5a675a7caf30e032d3fefa30624dff4f1d5eda   "/docker-entrypoint.ΓÇª"   frontend   46 seconds ago   Up 44 seconds (healthy)   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+
+итого: пройдено 27, провалено 0
+вывод сохранен в lab2/docs/verify-output.txt
+**********************
+Windows PowerShell transcript end
+End time: 20261010013304
+**********************

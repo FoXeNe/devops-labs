@@ -1,0 +1,40 @@
+# git 
+.git
+.gitignore
+.github
+.idea
+.vscode
+*.swp
+
+# локальные окружения 
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# локальная бд и данные
+.pgdata
+pgdata
+
+# секреты
+.env
+**/.env
+*.pem
+*.key
+
+# документация, отчёты, скриншоты
+docs
+lab1
+lab3
+**/*.md
+lab2/docs
+lab2/REPORT.md
+
+# мусор ОС
+.DS_Store
+Thumbs.db
+*.log

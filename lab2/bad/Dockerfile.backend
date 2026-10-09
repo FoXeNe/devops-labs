@@ -1,0 +1,31 @@
+# плохой вариант для сравнения, образ рабочий
+FROM python:latest
+
+# тянем все подряд, лишние сотни мегабайт в образе
+# || true в конце чтобы сборка не падала даже если apt ругнется
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    git \
+    curl \
+    vim \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/* || true
+
+WORKDIR /app
+
+# сначала кидаем весь контекст, и только потом ставим зависимости, из-за этого любая правка кода сбрасывает кеш и пакеты ставятся заново
+COPY . .
+
+RUN pip install --upgrade pip && pip install -r backend/requirements.txt
+
+# пароль от базы прямо в образе, виден в docker history и уходит в registry вместе с образом
+ENV DATABASE_URL="postgresql+asyncpg://notes:supersecret@db:5432/notesdb"
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# user не задан, то есть запуска от root. healthcheck тоже нет
+WORKDIR /app/backend
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

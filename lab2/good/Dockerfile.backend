@@ -1,0 +1,58 @@
+# хороший вариант, собираем из корня репозитория:
+#   docker build -f lab2/good/Dockerfile.backend -t notes-backend:good .
+
+# builder, в финальный образ компиляторы не попадут
+FROM python:3.11.9-slim-bookworm AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# gcc нужен только чтобы собрать asyncpg, дальше он не нужен
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# сначала только requirements, код копируется ниже отдельным слоем
+# пока requirements не менялся, слой с pip install берется из кеша
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
+
+# рантайм, тут только то что нужно приложению
+FROM python:3.11.9-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# DATABASE_URL тут намеренно не задаем: доступы к базе должны жить вне образа
+# их подставляет compose из lab2/.env, а entrypoint падает, если переменной нет
+
+# готовое окружение из builder, без gcc и кешей
+COPY --from=builder /opt/venv /opt/venv
+
+# отдельный пользователь, чтобы приложение не работало от root
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
+
+WORKDIR /srv/app
+
+# код копируем после зависимостей, иначе кеш слоев теряется
+COPY --chown=app:app backend/app ./app
+COPY --chown=app:app backend/requirements.txt ./requirements.txt
+COPY --chown=app:app lab2/good/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 0755 /usr/local/bin/entrypoint.sh
+
+USER app
+
+EXPOSE 8000
+
+# проверяем реальный эндпоинт приложения, а не просто что процесс запущен
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).status == 200 else 1)"
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
