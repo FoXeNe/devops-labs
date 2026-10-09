@@ -1,0 +1,40 @@
+# плохой compose для сравнения. поднимает стек на образе из bad/Dockerfile.backend
+# и повторяет обычные ошибки уже на уровне compose
+#   docker compose -f lab2/docker-compose.bad.yml up -d --build
+#
+# что тут не так: пароли захардкожены, нет healthcheck, restart и лимитов,
+# depends_on без условия (бэкенд стартует раньше базы), у базы анонимный том,
+# порт базы опубликован на хост, и все сервисы в одной сети, то есть фронт
+# может стучаться в базу напрямую
+
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      # пароли в открытом виде в репозитории
+      POSTGRES_DB: notesdb
+      POSTGRES_USER: notes
+      POSTGRES_PASSWORD: supersecret
+    ports:
+      - "5432:5432"
+    volumes:
+      # том анонимный, при down -v данные уедут
+      - /var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ..
+      dockerfile: lab2/bad/Dockerfile.backend
+    image: notes-backend:bad
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: lab2/good/Dockerfile.frontend
+    image: notes-frontend:bad-stack
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
