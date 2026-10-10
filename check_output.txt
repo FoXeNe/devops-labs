@@ -1,4 +1,4 @@
-Лаба 1 — проверки nginx
+Лаба 1 - проверки nginx
 1. HTTP -> HTTPS редирект
 Код: 301 | Location: https://local.project/
 
@@ -6,9 +6,30 @@
 {"status":"ok","instance":"backend-1"}
 {"status":"ok","instance":"backend-2"}
 {"status":"ok","instance":"backend-1"}
-{"status":"ok","instance":"backend-2"}
-{"status":"ok","instance":"backend-1"}
-{"status":"ok","instance":"backend-2"}
+<html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx/1.28.3 (Ubuntu)</center>
+</body>
+</html>
+
+<html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx/1.28.3 (Ubuntu)</center>
+</body>
+</html>
+
+<html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx/1.28.3 (Ubuntu)</center>
+</body>
+</html>
+
 3. /admin без пароля
 Код: 401
  4. /admin с паролем
@@ -28,8 +49,10 @@ OK: контент не пересекается
 9. Rate limit 
 200 200 200 200 200 200 429 429 429 429 429 429 429 429 429 
 
-10. Отказоустойчивость 
- Останови один из backend и нажми Enter
+10. Отказоустойчивость
+Ждём 15 секунд, чтобы rate limit сбросился...
+Останови один из backend (Ctrl+C в его окне), потом нажми Enter
+Запросы после падения одного backend (ожидаем всё 200):
 Запросы после падения одного backend :
 {"status":"ok","instance":"backend-1"}
 {"status":"ok","instance":"backend-1"}

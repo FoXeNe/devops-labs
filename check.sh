@@ -2,10 +2,17 @@
 # check.sh - проверки лабы 1 (nginx)
 # Запускать из ~/coud-labs. Требует запущенный nginx и два бэкенда.
 
-HOST="local.project"
-SECOND="second.project"
-ADMIN_USER="admin"
-ADMIN_PASS="admin123"
+# Загружаем креды из .env, если файл есть
+if [ -f "$(dirname "$0")/.env" ]; then
+    set -a
+    source "$(dirname "$0")/.env"
+    set +a
+fi
+
+HOST="${HOST:-local.project}"
+SECOND="${SECOND:-second.project}"
+ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_PASS="${ADMIN_PASS:-changeme}"
 
 CURL="curl -k -s"
 
@@ -55,9 +62,12 @@ done
 echo ""
 
 echo ""
-echo "10. Отказоустойчивость "
-echo " Останови один из backend и нажми Enter"
+echo "10. Отказоустойчивость"
+echo "Ждём 15 секунд, чтобы rate limit сбросился..."
+sleep 15
+echo "Останови один из backend (Ctrl+C в его окне), потом нажми Enter"
 read
+echo "Запросы после падения одного backend (ожидаем всё 200):"
 
 echo "Запросы после падения одного backend :"
 for i in 1 2 3 4 5 6; do
