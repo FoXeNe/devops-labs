@@ -121,4 +121,12 @@ pkill -f "port 8081"
 
 ## Скриншоты
 
-См. папку `screenshots/`.
+Все в папке `screenshots/`:
+
+- `redirect http - https.jpg` — редирект HTTP → HTTPS (301)
+- `balansirovka.jpg` — чередование backend-1 / backend-2 через nginx
+- `rate limit.jpg` — rate limit: 6 запросов 200, дальше 429
+- `admin.jpg` — /admin без пароля 401, с паролем 404
+- `docs_vhosts.jpg` — /docs через alias и второй виртуальный хост
+- `404.jpg` - кастомная страница 404
+- `otkazaustoichivost.jpg` — оба живы → backend-2 убит → сайт жив через backend-1
