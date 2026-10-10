@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -32,9 +33,12 @@ app.add_middleware(
 )
 
 
+INSTANCE_ID = os.getenv("INSTANCE_ID", "unknown")
+
+
 @app.get("/api/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "instance": INSTANCE_ID}
 
 
 # новые сверху, так удобнее проверять что запись вообще создалась
