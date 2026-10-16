@@ -100,7 +100,7 @@ jobs:
         # версия trivy-action@v0.35.0 зафиксирована по SHA (v0.35.0)
         uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5
         with: 
-          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ girhub.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
@@ -112,7 +112,7 @@ jobs:
         # версия trivy-action@v0.35.0 зафиксирована по SHA (v0.35.0)
         uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5
         with: 
-          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ girhub.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
