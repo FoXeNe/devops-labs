@@ -72,7 +72,7 @@ jobs:
 
       - name: Сборка backend-образа
         # версия docker-build-push-action@v6 зафиксирована по SHA (v6.0.0)
-        uses: docker-build-push-action@48a1cc5a2a5a586d8c4c1c4c4c4c4c4c4c4c4c4c
+        uses: docker/build-push-action@48a1cc5a2a5a586d8c4c1c4c4c4c4c4c4c4c4c4c
         with:
           context: ./backend
           file: ./backend/Dockerfile.backend
@@ -85,7 +85,7 @@ jobs:
 
       - name: Сборка frontend-образа
         # версия docker-build-push-action@v6 зафиксирована по SHA (v6.0.0)
-        uses: docker-build-push-action@48a1cc5a2a5a586d8c4c1c4c4c4c4c4c4c4c4c4c
+        uses: docker/build-push-action@48a1cc5a2a5a586d8c4c1c4c4c4c4c4c4c4c4c4c
         with:
           context: ./frontend
           file: ./frontend/Dockerfile.frontend
