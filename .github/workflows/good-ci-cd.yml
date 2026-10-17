@@ -11,7 +11,7 @@ env:
 
 jobs:
   lint-test:
-    runs-on: ubuntu:latest
+    runs-on: ubuntu-latest
     steps:
       # версия actions/checkout@v4 зафиксирована по SHA (v4.2.2)
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
