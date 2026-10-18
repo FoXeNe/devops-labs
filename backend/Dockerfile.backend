@@ -18,7 +18,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # сначала только requirements, код копируется ниже отдельным слоем
 # пока requirements не менялся, слой с pip install берется из кеша
-COPY requirements.txt /tmp/requirements.txt
+COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
 # рантайм, тут только то что нужно приложению
