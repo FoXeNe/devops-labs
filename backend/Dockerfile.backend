@@ -43,7 +43,7 @@ WORKDIR /srv/app
 # код копируем после зависимостей, иначе кеш слоев теряется
 COPY --chown=app:app backend/app ./app
 COPY --chown=app:app backend/requirements.txt ./requirements.txt
-COPY --chown=app:app lab2/good/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chown=app:app backend/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 0755 /usr/local/bin/entrypoint.sh
 
 USER app
