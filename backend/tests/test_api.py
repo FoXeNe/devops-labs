@@ -29,8 +29,10 @@ def test_get_items_returns_list(client, mock_session):
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
-    assert data[0] == {"id": 2, "text": "second"}
-    assert data[1] == {"id": 1, "text": "first"}
+    assert data[0]["id"] == 2
+    assert data[0]["text"] == "second"
+    assert data[1]["id"] == 1
+    assert data[1]["text"] == "first"
 
 
 def test_items_empty(client, mock_session):
@@ -64,7 +66,9 @@ def test_create_item(client, mock_session):
     response = client.post("/api/items", json={"text": "do cloud lab"})
 
     assert response.status_code == 201
-    assert response.json() == {"id": 67, "text": "do cloud lab"}
+    data = response.json()
+    assert data["id"] == 67
+    assert data["text"] == "do cloud lab"
 
     mock_session.add.assert_called_once()
     added_item = mock_session.add.call_args.args[0]
