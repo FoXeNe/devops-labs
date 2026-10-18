@@ -1,5 +1,7 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
+import timezone
 from app.database import get_session
 from app.main import app
 
@@ -55,6 +57,7 @@ def test_create_item(client, mock_session):
     # эмулируем поведение после commit + refresh
     async def refresh_side_effect(note):
         note.id = 67 
+        note.created_at = datetime.now(timezone.utc)
 
     mock_session.refresh = AsyncMock(side_effect=refresh_side_effect)
 
@@ -69,6 +72,7 @@ def test_create_item(client, mock_session):
     data = response.json()
     assert data["id"] == 67
     assert data["text"] == "do cloud lab"
+    assert "created_at" in data
 
     mock_session.add.assert_called_once()
     added_item = mock_session.add.call_args.args[0]
