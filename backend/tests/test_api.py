@@ -1,7 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-import timezone
 from app.database import get_session
 from app.main import app
 
