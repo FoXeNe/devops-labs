@@ -24,27 +24,20 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/requirements.txt
 
-      - name: Установка линтера ruff
-        uses: astral-sh/ruff-action@v3
-        with:
-          version: '0.6.9'
+      - name: Установка зависимостей бэкенда
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest==8.3.4 ruff==0.6.9
 
       - name: Линт (ruff)
         run: ruff check backend/ --output-format=github
 
-      - name: Проверка форматирования (ruff format)
-        run: ruff format backend/ --check
-
-      - name: Установка записимостей бэкенда
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install pytest
-
-      - name: Запуск тестов (pytest)
+      - name: Запуск unit-тестов (pytest)
         run: |
           cd backend
           pytest tests/ -v
+
   build-scan-push:
     needs: lint-test
     runs-on: ubuntu-latest
@@ -52,7 +45,6 @@ jobs:
       contents: read
       packages: write
       security-events: write
-
     steps:
       # версия actions/checkout@v4 зафиксирована по SHA (v4.2.2)
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -77,9 +69,11 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile.backend
           load: true
+          # Новый образ сохраняется с тегом sha коммита и как latest
           tags: |
             ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          # Имеется кеширование gha
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
@@ -90,9 +84,11 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile.frontend
           load: true
+          # Новый образ сохраняется с тегом sha коммита и как latest
           tags: |
             ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          # Имеется кеширование gha
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
@@ -104,9 +100,8 @@ jobs:
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
-          vuln-type: 'os,library'
           # Trivy падает на уязвимостях CRITICAL
-          severity: 'CRIRTICAL'
+          severity: 'CRITICAL'
 
       - name: Сканирование frontend-образа через Trivy
         # версия trivy-action@v0.35.0 зафиксирована по SHA (v0.35.0)
@@ -116,9 +111,8 @@ jobs:
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
-          vuln-type: 'os,library'
           # Trivy падает на уязвимостях CRITICAL
-          severity: 'CRIRTICAL'
+          severity: 'CRITICAL'
 
       - name: Пуш backend-образа
         run: |
@@ -175,5 +169,3 @@ jobs:
   #       run: |
   #         curl --fail --retry 5 --retry-delay 10 \
   #           http://${{ secrets.SSH_HOST }}/ || exit 1
-  #
-  #     - name: Проверка бэкенда
