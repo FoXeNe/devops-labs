@@ -28,7 +28,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install pytest==8.3.4 ruff==0.6.9
+          pip install pytest==8.3.4 ruff==0.6.9 httpx2==2.13.1
 
       - name: Линт (ruff)
         run: ruff check backend/ --output-format=github
