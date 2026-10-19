@@ -2,7 +2,7 @@
 #   docker build -f backend/Dockerfile.backend -t notes-backend .
 
 # builder, в финальный образ компиляторы не попадут
-FROM python:3.11.9-slim-bookworm AS builder
+FROM python:3.11-alpine AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -10,7 +10,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # gcc нужен только чтобы собрать asyncpg, дальше он не нужен
 RUN apt-get update \
-    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,14 +22,14 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
 # рантайм, тут только то что нужно приложению
-FROM python:3.11.9-slim-bookworm AS runtime
+FROM python:3.11-alpine AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
 
 # DATABASE_URL тут намеренно не задаем: доступы к базе должны жить вне образа
-# их подставляет compose из lab2/.env, а entrypoint падает, если переменной нет
+# их подставляет compose, а entrypoint падает, если переменной нет
 
 # готовое окружение из builder, без gcc и кешей
 COPY --from=builder /opt/venv /opt/venv
