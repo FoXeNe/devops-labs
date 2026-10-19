@@ -132,7 +132,7 @@ jobs:
       - name: Подготовка .env для docker compose
         run: |
           cat > .env <<EOF
-          GHCR_REPO=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          GHCR_REPO=foxene/devops-labs
           IMAGE_TAG=latest
           POSTGRES_DB=notesdb
           POSTGRES_USER=notes
