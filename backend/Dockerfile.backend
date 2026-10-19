@@ -2,6 +2,7 @@
 #   docker build -f backend/Dockerfile.backend -t notes-backend .
 
 # builder, в финальный образ компиляторы не попадут
+# взят более легковесный образ с python
 FROM python:3.11-alpine AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -35,9 +36,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # готовое окружение из builder, без gcc и кешей
 COPY --from=builder /opt/venv /opt/venv
 
+# libpq нужна для работы asyncpg в рантайме
+RUN apk add --no-cache libpq
+
 # отдельный пользователь, чтобы приложение не работало от root
-RUN groupadd --gid 10001 app \
-    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
+RUN addgroup -g 10001 -S app \
+    && adduser -u 10001 -S -G app -h /home/app -s /sbin/nologin app
 
 WORKDIR /srv/app
 
