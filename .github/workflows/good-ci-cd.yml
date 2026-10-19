@@ -133,7 +133,7 @@ jobs:
         run: |
           cat > .env <<EOF
           GHCR_REPO=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=${{ github.sha }}
+          IMAGE_TAG=latest
           POSTGRES_DB=notes
           POSTGRES_USER=notes
           POSTGRES_PASSWORD=test_password_for_lab
