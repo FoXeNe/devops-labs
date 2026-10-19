@@ -2,7 +2,12 @@
 # собирается из корня:
 #   docker build -f frontend/Dockerfile.frontend -t notes-frontend .
 
-FROM nginx:1.27.4-alpine AS runtime
+# более свежий образ с меньшим количеством уязвимостей
+FROM nginx:1.29.5-alpine AS runtime
+
+# Обновляем пакеты базового образа, чтобы подтянуть патчи безопасности
+RUN apk upgrade --no-cache && \
+    rm -rf /var/cache/apk/*
 
 # свой конфиг, в нем проксирование /api на сервис backend
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
