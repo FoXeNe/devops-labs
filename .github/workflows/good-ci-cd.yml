@@ -6,8 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE_NAME: devops-labs/backend
-  FRONTEND_IMAGE_NAME: devops-labs/frontend
+  BACKEND_IMAGE_NAME: foxene/devops-labs/backend
+  FRONTEND_IMAGE_NAME: foxene/devops-labs/frontend
 
 jobs:
   lint-test:
