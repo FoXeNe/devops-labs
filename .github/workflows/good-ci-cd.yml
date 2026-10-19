@@ -150,7 +150,7 @@ jobs:
 
       - name: Запуск приложения
         run: |
-          docker compose pull -v
+          docker compose pull
           docker compose up -d --wait
           docker compose ps
 
