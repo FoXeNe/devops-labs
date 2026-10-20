@@ -70,7 +70,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-          exit-code: '0'argument
+          exit-code: '0'
           severity: 'CRITICAL'
 
       - name: Сканирование frontend-образа через Trivy
