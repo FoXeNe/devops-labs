@@ -1,7 +1,6 @@
 name: Good CI/CD pipeline
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 env:
   REGISTRY: ghcr.io
