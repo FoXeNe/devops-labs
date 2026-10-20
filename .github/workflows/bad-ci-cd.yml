@@ -1,6 +1,8 @@
 name: Bad CI/CD pipeline
 
-on: workflow_dispatch
+on:
+  push:
+    branches: [ lab3-ci/cd ]
 
 env:
   REGISTRY: ghcr.io
