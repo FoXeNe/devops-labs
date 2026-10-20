@@ -1,0 +1,133 @@
+name: Bad CI/CD pipeline
+
+on:
+  push:
+    branches: [ lab3-ci/cd ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # ПЛОХО: хардкод секрета прямо в yaml. Работает, но пароль виден всем
+  POSTGRES_PASSWORD: "supersecret123"
+  BACKEND_IMAGE_NAME: foxene/devops-labs/backend
+  FRONTEND_IMAGE_NAME: foxene/devops-labs/frontend
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      # ПЛОХО: плавающий тег @v4. Работает, но уязвим к подмене
+      - uses: actions/checkout@v4
+
+      # ПЛОХО: нефиксированная версия Python и НЕТ кеша pip. Медленно, но работает
+      - name: Установка python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Установка зависимостей бэкенда
+        # ПЛОХО: установка без указания точной версий. Работает, пока не выйдет breaking change
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest ruff httpx2
+
+      - name: Линт (ruff)
+        # ПЛОХО: пайплайн не останавливается, когда линт упал
+        continue-on-error: true
+        run: ruff check backend/ --output-format=github
+
+      - name: Запуск unit-тестов (pytest)
+        # ПЛОХО: тесты падают, но пайплайн не останавливается
+        continue-on-error: true
+        run: |
+          cd backend
+          pytest tests/ -v
+
+  build-scan-push:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      # ПЛОХО: плавающий тег @v4. Работает, но уязвим к подмене
+      - uses: actions/checkout@v4
+
+      - name: Вход в GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # ПЛОХО: сборка через обычный docker build, без Buildx и без кеша слоёв
+      - name: Сборка backend
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest -f backend/Dockerfile.backend .
+
+      # ПЛОХО: тег latest вместо SHA. Работает, но откатиться на прошлую версию нельзя
+      - name: Сборка frontend
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest -f frontend/Dockerfile.frontend        
+
+      # ПЛОХО: Trivy с exit-code: 0. Сканирует, но НИКОГДА не блокирует пуш
+      - name: Сканирование backend-образа через Trivy 
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          exit-code: '0'
+          severity: 'CRITICAL'
+
+      - name: Сканирование frontend-образа через Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          exit-code: '0'
+          severity: 'CRITICAL'
+
+      # ПЛОХО: пуш образа без проверки trivy, а также в качестве тега используется только latest, без SHA
+      - name: Пуш backend-образа
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+
+      - name: Пуш frontend-образа
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+
+  run-and-verify:
+    needs: build-scan-push
+    runs-on: ubuntu-latest
+    steps:
+      # ПЛОХО: плавающий тег @v4. Работает, но уязвим к подмене
+      - uses: actions/checkout@v4
+
+      # ПЛОХО: пароль от базы данных захардкожен вместо хранения в секретах CI
+      - name: Подготовка .env для docker compose
+        run: |
+          cat > .env <<EOF
+          GHCR_REPO=foxene/devops-labs
+          IMAGE_TAG=latest
+          POSTGRES_DB=notesdb
+          POSTGRES_USER=notes
+          POSTGRES_PASSWORD=change-me-please
+          BACKEND_PORT=8000
+          FRONTEND_PORT=8080
+          EOF
+
+      - name: Логин в GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # ПЛОХО: запуск без --wait. compose вернётся сразу, curl может не успеть
+      - name: Запуск
+        run: |
+          docker compose pull
+          docker compose up -d
+
+      # ПЛОХО: проверка без retry и с || true. Даже если сервис не поднялся, шаг зелёный
+      - name: Проверка
+        run: |
+          sleep 10
+          curl http://localhost:8080/healthz || true
+          curl http://localhost:8000/api/health || true
+          echo "Наверное, работает"
+
+      # ПЛОХО: очистка без if: always(). Если что-то упало — контейнеры остаются
+      - name: Остановка
+        run: docker compose down -v
+
