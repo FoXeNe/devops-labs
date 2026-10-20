@@ -1,8 +1,6 @@
 name: Good CI/CD pipeline
 
 on:
-  push:
-    branches: [ lab3-ci/cd ]
   workflow_dispatch:
 
 env:
