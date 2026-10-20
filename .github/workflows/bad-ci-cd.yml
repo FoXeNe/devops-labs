@@ -64,7 +64,7 @@ jobs:
       # ПЛОХО: тег latest вместо SHA. Работает, но откатиться на прошлую версию нельзя
       - name: Сборка frontend
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest -f frontend/Dockerfile.frontend        
+          docker build -t ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest -f frontend/Dockerfile.frontend .
 
       # ПЛОХО: Trivy с exit-code: 0. Сканирует, но НИКОГДА не блокирует пуш
       - name: Сканирование backend-образа через Trivy 
