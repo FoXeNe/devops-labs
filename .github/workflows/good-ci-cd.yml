@@ -280,6 +280,20 @@ jobs:
           git commit -m "chore(rollback): auto-revert to ${{ steps.target.outputs.tag }}" || echo "no changes"
           git push origin HEAD:lab3-ci/cd
 
+      - name: ДИАГНОСТИКА (временно)
+        if: always()
+        run: |
+          docker compose ps
+          echo "=== backend health ==="
+          CID=$(docker compose ps -q backend)
+          [ -n "$CID" ] && docker inspect --format='{{json .State.Health}}' "$CID" | jq '.Log[-5:][] | .Output' || true
+          echo "=== backend logs ==="
+          docker compose logs backend --tail=80 || true
+          echo "=== db logs ==="
+          docker compose logs db --tail=60 || true
+          echo "=== таблицы в БД ==="
+          docker compose exec -T db psql -U notes -d notesdb -c '\dt' || true
+
       - name: Остановка контейнеров после отката
         if: always()
         run: docker compose down -v || true
