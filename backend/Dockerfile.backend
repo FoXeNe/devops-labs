@@ -2,18 +2,18 @@
 #   docker build -f backend/Dockerfile.backend -t notes-backend .
 
 # builder, в финальный образ компиляторы не попадут
-# взят более легковесный образ с python
-FROM python:3.11-alpine AS builder
+# взят "жирный" образ
+FROM python:3.11 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+  PIP_NO_CACHE_DIR=1 \
+  PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # gcc нужен только чтобы собрать asyncpg, дальше он не нужен
 RUN apk add --no-cache --virtual .build-deps \
-    build-base \
-    musl-dev \
-    postgresql-dev
+  build-base \
+  musl-dev \
+  postgresql-dev
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -23,12 +23,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
-# рантайм, тут только то что нужно приложению
-FROM python:3.11-alpine AS runtime
+# взят "жирный" образ
+FROM python:3.11 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
+  PYTHONUNBUFFERED=1 \
+  PATH="/opt/venv/bin:$PATH"
 
 # DATABASE_URL тут намеренно не задаем: доступы к базе должны жить вне образа
 # их подставляет compose, а entrypoint падает, если переменной нет
@@ -41,7 +41,7 @@ RUN apk add --no-cache libpq
 
 # отдельный пользователь, чтобы приложение не работало от root
 RUN addgroup -g 10001 -S app \
-    && adduser -u 10001 -S -G app -h /home/app -s /sbin/nologin app
+  && adduser -u 10001 -S -G app -h /home/app -s /sbin/nologin app
 
 WORKDIR /srv/app
 
@@ -57,7 +57,7 @@ EXPOSE 8000
 
 # проверяем реальный эндпоинт приложения, а не просто что процесс запущен
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).status == 200 else 1)"
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).status == 200 else 1)"
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
