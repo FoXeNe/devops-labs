@@ -1,17 +1,33 @@
-# взят "жирный" образ
-FROM python:3.11 AS runtime
+# использован образ с CVE
+FROM python:3.11.9-slim-bookworm AS builder
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PIP_NO_CACHE_DIR=1 \
+  PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# gcc нужен только чтобы собрать asyncpg, дальше он не нужен
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-  curl \
+  && apt-get upgrade -y \
+  && apt-get install -y --no-install-recommends build-essential \
   && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
+FROM python:3.11.9-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PATH="/opt/venv/bin:$PATH"
+
+COPY --from=builder /opt/venv /opt/venv
+
 # отдельный пользователь, чтобы приложение не работало от root
-RUN groupadd -g 10001 app \
-  && useradd -u 10001 -g app -s /usr/sbin/nologin -M app
+RUN groupadd --gid 10001 app \
+  && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
 
 WORKDIR /srv/app
 
