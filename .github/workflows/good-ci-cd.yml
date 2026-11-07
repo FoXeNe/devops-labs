@@ -8,6 +8,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE_NAME: foxene/devops-labs/backend
   FRONTEND_IMAGE_NAME: foxene/devops-labs/frontend
+  RELEASE_STATE_FILE: .deploy/current_release.txt
 
 jobs:
   lint-test:
@@ -127,14 +128,34 @@ jobs:
   run-and-verify:
     needs: build-scan-push
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    outputs:
+      # Тег предыдущего (рабочего) коммита
+      previous_tag: ${{ steps.prev.outputs.previous }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: lab3-ci/cd
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Запомнить предыдущую версию (до деплоя)
+        id: prev
+        run: |
+          mkdir -p .deploy
+          if [ -f "${{ env.RELEASE_STATE_FILE }}" ]; then
+            PREV=$(tr -d '\n' < "${{ env.RELEASE_STATE_FILE }}")
+          else
+            PREV="${{ github.sha }}"
+          fi
+          echo "previous=${PREV}" >> "$GITHUB_OUTPUT"
 
       - name: Подготовка .env для docker compose
         run: |
           cat > .env <<EOF
           GHCR_REPO=foxene/devops-labs
-          IMAGE_TAG=latest
+          IMAGE_TAG=${{ github.sha }}
           POSTGRES_DB=notesdb
           POSTGRES_USER=notes
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
@@ -167,7 +188,99 @@ jobs:
             http://localhost:8000/api/health
           echo "Backend доступен"
 
+      - name: Зафиксировать новую рабочую версию
+        run: |
+          echo "${{ github.sha }}" > "${{ env.RELEASE_STATE_FILE }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ env.RELEASE_STATE_FILE }}"
+          git commit -m "chore(deploy): release ${{ github.sha }}" || echo "no changes"
+          git push origin HEAD:lab3-ci/cd
+
       - name: Остановка
         if: always()
-        run: docker compose down -v
+        run: docker compose down -v || true
+  
+  # Job для автоматического отката к стабильной версии
+  auto-rollback:
+    needs: run-and-verify
+    # Запустится, даже если приложение не отвечает
+    if: always() && needs.run-and-verify.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: lab3-ci/cd
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Определить целевой тег отката
+        id: target
+        run: |
+          TARGET="${{ needs.run-and-verify.outputs.previous_tag }}"
+          if [ -z "$TARGET" ] && [ -f "${{ env.RELEASE_STATE_FILE }}" ]; then
+            TARGET=$(tr -d '\n' < "${{ env.RELEASE_STATE_FILE }}")
+          fi
+          if [ -z "$TARGET" ]; then
+            echo "::error::Нет предыдущей версии для отката"
+            exit 1
+          fi
+          echo "tag=${TARGET}" >> "$GITHUB_OUTPUT"
+          echo "Авто-откат на SHA: ${TARGET}"
+
+      - name: Логин в GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Подготовка .env для отката
+        run: |
+          cat > .env <<EOF
+          GHCR_REPO=foxene/devops-labs
+          IMAGE_TAG=${{ steps.target.outputs.tag }}
+          POSTGRES_DB=notesdb
+          POSTGRES_USER=notes
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          BACKEND_PORT=8000
+          FRONTEND_PORT=8080
+          EOF
+
+      - name: Откат + замер времени
+        id: rollback
+        run: |
+          START_TIME=$(date +%s)
+          docker compose pull
+          docker compose up -d --wait
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "rollback_seconds=${DURATION}" >> "$GITHUB_OUTPUT"
+          echo "Авто-откат занял ${DURATION} секунд"
+
+      - name: Проверка, что сервис снова жив (curl)
+        run: |
+          curl --fail --silent --show-error \
+            --retry 10 --retry-delay 3 --retry-connrefused \
+            http://localhost:8080/healthz -o /dev/null
+          echo "Frontend отвечает после отката"
+          curl --fail --silent --show-error \
+            --retry 10 --retry-delay 3 --retry-connrefused \
+            http://localhost:8000/api/health
+          echo "Backend отвечает после отката"
+
+      - name: Вернуть state-файл на откатанную версию
+        run: |
+          echo "${{ steps.target.outputs.tag }}" > "${{ env.RELEASE_STATE_FILE }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ env.RELEASE_STATE_FILE }}"
+          git commit -m "chore(rollback): auto-revert to ${{ steps.target.outputs.tag }}" || echo "no changes"
+          git push origin HEAD:lab3-ci/cd
+
+      - name: Остановка контейнеров после отката
+        if: always()
+        run: docker compose down -v || true
 
