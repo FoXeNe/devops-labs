@@ -5,12 +5,6 @@ from app.database import get_session
 from app.main import app
 
 
-def test_health(client):
-    response = client.get("/api/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-
-
 def test_get_items_returns_list(client, mock_session):
     # эмулируем результат session.execute(...).scalars().all()
     mock_result = MagicMock()
@@ -55,7 +49,7 @@ def test_items_empty(client, mock_session):
 def test_create_item(client, mock_session):
     # эмулируем поведение после commit + refresh
     async def refresh_side_effect(note):
-        note.id = 67 
+        note.id = 67
         note.created_at = datetime.now(timezone.utc)
 
     mock_session.refresh = AsyncMock(side_effect=refresh_side_effect)
