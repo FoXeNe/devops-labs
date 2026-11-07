@@ -280,6 +280,14 @@ jobs:
           git commit -m "chore(rollback): auto-revert to ${{ steps.target.outputs.tag }}" || echo "no changes"
           git push origin HEAD:lab3-ci/cd
 
+      - name: ДИАГНОСТИКА
+        if: always()
+        run: |
+          CID=$(docker compose ps -q backend)
+          docker inspect --format='{{json .State.Health}}' "$CID" | jq '.Log[-3:][] | {ExitCode, Output}' || true
+          docker compose logs backend --tail=80 || true
+          docker compose logs db --tail=40 || true
+
       - name: Остановка контейнеров после отката
         if: always()
         run: docker compose down -v || true
