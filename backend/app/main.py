@@ -34,7 +34,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    raise Exception()
 
 
 # новые сверху, так удобнее проверять что запись вообще создалась
@@ -45,9 +45,12 @@ async def get_items(session: AsyncSession = Depends(get_session)):
 
 
 @app.post("/api/items", response_model=NoteOut, status_code=201)
-async def create_item(payload: NoteCreate, session: AsyncSession = Depends(get_session)):
+async def create_item(
+    payload: NoteCreate, session: AsyncSession = Depends(get_session)
+):
     note = Note(text=payload.text)
     session.add(note)
     await session.commit()
     await session.refresh(note)
     return note
+

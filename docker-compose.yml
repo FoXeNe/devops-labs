@@ -1,0 +1,92 @@
+name: lab3-notes
+
+services:
+  db:
+    # Версия образа postgresql зафиксирована по sha256
+    image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+    container_name: lab3-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-notesdb}
+      POSTGRES_USER: ${POSTGRES_USER:-notes}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD не задан, настройте секреты ci}
+    volumes:
+      # именованный том, данные переживают пересоздание контейнера
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    # на хост порт не публикуем, снаружи база недоступна
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/${GHCR_REPO}/backend:${IMAGE_TAG:-latest}
+    container_name: lab3-backend
+    environment:
+      # в образе секретов нет, все приходит отсюда
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-notes}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-notesdb}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"          
+    networks:
+      - frontend-net                          # виден фронту
+      - backend-net                           # и только он видит базу
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  frontend:
+    image: ghcr.io/${GHCR_REPO}/frontend:${IMAGE_TAG:-latest}
+    container_name: lab3-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - frontend-net                          # сети backend-net здесь нет, в этом и изоляция
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+volumes:
+  pgdata:
+    name: lab3-pgdata
+
+networks:
+  frontend-net:
+    name: lab3-frontend-net
+    driver: bridge
+  backend-net:
+    name: lab3-backend-net
+    driver: bridge
+    internal: true                            # без выхода наружу, только db и backend
